@@ -64,19 +64,31 @@ export function LiveSync({ store, teamIds, onError }: { store: BoardStore; teamI
     };
     type Change = { new: Record<string, unknown> | null; old: Record<string, unknown> | null };
     const pick = (key: "id" | "job_id") => (c: Change) => refetch((c.new?.[key] ?? c.old?.[key]) as number | undefined);
-    const channel = sb
-      .channel("jobrun-board")
-      .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, pick("id"))
-      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, pick("job_id"))
-      .on("postgres_changes", { event: "*", schema: "public", table: "tracker" }, pick("job_id"))
-      .on("postgres_changes", { event: "*", schema: "public", table: "evidence" }, pick("job_id"))
-      .subscribe();
+    // Realtime applies RLS with the socket's token: hand it the operator's session before subscribing,
+    // otherwise it connects with the public key and every change is filtered out.
+    let channel: ReturnType<typeof sb.channel> | null = null, cancelled = false;
+    const { data: authSub } = sb.auth.onAuthStateChange((_e, session) => { sb.realtime.setAuth(session?.access_token ?? null); });
+    sb.auth.getSession().then(async ({ data }) => {
+      if (cancelled) return;
+      await sb.realtime.setAuth(data.session?.access_token ?? null);
+      channel = sb
+        .channel("jobrun-board")
+        .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, pick("id"))
+        .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, pick("job_id"))
+        .on("postgres_changes", { event: "*", schema: "public", table: "tracker" }, pick("job_id"))
+        .on("postgres_changes", { event: "*", schema: "public", table: "evidence" }, pick("job_id"))
+        .subscribe((status, err) => {
+          if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") console.warn("jobRUN realtime:", status, err?.message ?? "");
+        });
+    });
 
     return () => {
       store.setChangeHook(null);
       pending.forEach((p, id) => { clearTimeout(p.timer); flush(id); });
       timers.forEach((t) => clearTimeout(t));
-      sb.removeChannel(channel);
+      cancelled = true;
+      authSub.subscription.unsubscribe();
+      if (channel) sb.removeChannel(channel);
     };
   }, [store, teamIds, onError]);
   return null;

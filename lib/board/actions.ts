@@ -127,7 +127,9 @@ export function setTeam(c: ActionCtx, id: string, team: number) {
 /** Cleaning teams free over the job's window, default team first (teamOptions). */
 export function teamOptions(c: ActionCtx, j: Job) {
   const p = c.w.prop(j.prop), T = c.w.teams.length;
-  const pool = [p.team, (p.team + 3) % T, (p.team + 7) % T];
+  // Live data may have no cleaning teams yet (PINCH's Pro list pending) or no property picked.
+  if (!T || !p.id) return [];
+  const pool = [...new Set([p.team % T, (p.team + 3) % T, (p.team + 7) % T])];
   const start = j.f.date && j.f.time ? etToEpoch(j.f.date, j.f.time) : null;
   const end = j.f.date ? etToEpoch(j.f.date, j.f.time2 || plus2(j.f.time || "09:00")) : null;
   return pool

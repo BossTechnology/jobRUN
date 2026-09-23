@@ -46,6 +46,11 @@ export function buildSimWorld(): World {
   return { customers, teams, props };
 }
 
+const NO_PROP: Prop = {
+  id: "", n: "", cust: "", custName: "", type: "mf", street: "", city: "", st: "", zip: "", lat: 0, lng: 0,
+  units: 0, cleaners: 0, mgr: "", phone: "", email: "", code: "", beds: 0, team: 0,
+};
+
 export interface City {
   k: string;
   ci: string;
@@ -77,7 +82,8 @@ export function indexWorld(w: World) {
   const cities = Object.values(m).map((c) => ({ ...c, lat: c.lat / c.n, lng: c.lng / c.n })).sort((a, b) => b.n - a.n);
   return {
     ...w,
-    prop: (id: string) => props.get(id)!,
+    /** Unknown ids (e.g. a live request with no property yet) get an empty placeholder instead of undefined. */
+    prop: (id: string) => props.get(id) ?? NO_PROP,
     cust: (id: string) => custs.get(id) ?? w.customers[0],
     states,
     stateC,

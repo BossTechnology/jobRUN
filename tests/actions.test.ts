@@ -100,3 +100,13 @@ describe("messages and assignment", () => {
     expect(seen).toEqual([[null, "Priya"]]);
   });
 });
+
+describe("live data edge cases", () => {
+  it("team options are empty when there are no cleaning teams or no property", async () => {
+    const { teamOptions } = await import("@/lib/board/actions");
+    const { ctx } = ctxWith([job()]);
+    expect(teamOptions({ ...ctx, w: { ...ctx.w, teams: [] } }, job())).toEqual([]);
+    expect(teamOptions(ctx, job({ prop: "missing" }))).toEqual([]);
+    expect(teamOptions(ctx, job()).length).toBeGreaterThan(0);
+  });
+});

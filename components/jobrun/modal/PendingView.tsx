@@ -249,9 +249,15 @@ export function PendingView({ j, initialTeamEdit, onActResult }: { j: Job; initi
             ))}
           </div>
         ) : (
-          <div className="jm-banner warn"><b>{l.st2.noneFree}</b><span>{l.st2.noneFreeD}</span></div>
+          <div className="jm-banner warn">
+            {w.teams.length ? (
+              <><b>{l.st2.noneFree}</b><span>{l.st2.noneFreeD}</span></>
+            ) : (
+              <><b>{(l.st2 as unknown as Record<string, string>).noTeamsLoaded}</b><span>{(l.st2 as unknown as Record<string, string>).noTeamsLoadedD}</span></>
+            )}
+          </div>
         )}
-        {j.stage === 0 && j.f.date && <div className="mm-hint">{l.st2.availNote(p.city, winTxt(j, lang) || l.st2.anyTime)}</div>}
+        {j.stage === 0 && j.f.date && w.teams.length > 0 && <div className="mm-hint">{l.st2.availNote(p.city, winTxt(j, lang) || l.st2.anyTime)}</div>}
       </>
     );
   }
