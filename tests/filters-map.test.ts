@@ -96,3 +96,17 @@ describe("DB ↔ board mapping", () => {
     expect(cols).toMatchObject({ stage: "in_progress", service: "deep_clean", owner_id: "op-1", team_id: "team-a", window_date: "2026-10-01", window_start: "09:00", window_end: "11:00", unit: "4B" });
   });
 });
+
+describe("live-mode header events", () => {
+  it("derives open incidents from job state", async () => {
+    const { deriveLiveEvents } = await import("@/lib/board/events");
+    const jobs = [
+      job({ id: "J1", stageAt: minutesAgo(45) }),
+      job({ id: "J2", stage: 1, owner: "Jake", teamOk: true, dateAt: minutesAgo(20) }),
+      job({ id: "J3", stage: 3, evidence: 0 }),
+    ];
+    const ev = deriveLiveEvents(world, jobs, [{ job_id: 2, at: new Date(minutesAgo(3)).toISOString(), kind: "auto_nudge", actor_type: "rule" }]);
+    expect(ev.map((e) => `${e.type}:${e.key}`).sort()).toEqual(["actions:nudge5", "alarms:noCheckin", "alerts:unclaimed", "anomalies:noEvidence"]);
+    expect(countFor(ev, "alarms", "now")).toBe(1);
+  });
+});

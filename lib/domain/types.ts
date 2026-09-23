@@ -178,4 +178,6 @@ export interface LiveBoard {
   /** cleaning_teams ids in World.teams order (the board stores team indexes) */
   teamIds: string[];
   me: Operator;
+  /** job_events from the last 6 hours, for the Actions feed */
+  recentEvents: { job_id: number; at: string; kind: string; actor_type: string }[];
 }

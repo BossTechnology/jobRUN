@@ -51,6 +51,8 @@ export interface LiveEvent {
   open: boolean;
   closeAt: number;
   resolvedAt?: number;
+  /** Logged by this browser (store.log); kept when live-mode events are re-derived. */
+  local?: boolean;
 }
 
 let SEQ = 0;
@@ -77,6 +79,7 @@ export function actionEvent(w: WorldIndex, jobs: Job[], key: string, j: Job, sta
   Object.assign(e.p, { jobId: j.id, svc: j.svc, customer: w.cust(j.cust).n, property: pr.n, unit: j.unit, contact: j.email || j.contact || "", op: j.owner || ME, stageI: stageI ?? j.stage, subject: j.req?.subj || "" });
   if (key === "newReq") Object.assign(e.p, { contact: j.req?.from ?? "", subject: j.req?.subj ?? "" });
   e.stageIdx = stageI ?? j.stage;
+  e.local = true;
   return e;
 }
 
@@ -149,4 +152,63 @@ export function countFor(scope: LiveEvent[], type: IntelType, tf: Timeframe, now
 
 export function ago(lang: Lang, e: LiveEvent, now = Date.now()) {
   return strings(lang).ago(Math.floor((now - e.t) / 60000));
+}
+
+/* ── Live mode: incidents derived from job state, actions from job_events (INTEGRATION.md §7) ── */
+
+export interface RecentEvent {
+  job_id: number;
+  at: string;
+  kind: string;
+  actor_type: string;
+}
+
+const EVENT_KEY: Record<string, string> = { auto_confirm: "nudge1h", auto_nudge: "nudge5", stage: "zendesk", assign: "workapp", field: "aiSender" };
+const hashId = (s: string) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return -Math.abs(h || 1);
+};
+
+/** Incidents open while their condition holds, timed from when the condition began; actions from job_events. */
+export function deriveLiveEvents(w: WorldIndex, jobs: Job[], recent: RecentEvent[], now = Date.now()): LiveEvent[] {
+  const out: LiveEvent[] = [];
+  const add = (type: IntelType, key: string, sev: Severity, j: Job, since: number) => {
+    const pr = w.prop(j.prop);
+    if (!pr) return;
+    out.push({
+      id: hashId(`${type}|${key}|${j.id}`), type, key, sev, stageIdx: j.stage, t: since, open: true, closeAt: Infinity,
+      p: {
+        jobId: j.id, customer: w.cust(j.cust).n, property: pr.n, unit: j.unit, cleaner: j.team != null ? w.teams[j.team]?.[0] ?? "" : "",
+        op: j.owner || "—", contact: j.contact ?? j.req?.name ?? "", m: Math.max(0, Math.round((now - since) / 60000)), h: Math.max(0, Math.round((now - since) / 3600000)),
+        e: "", d: "", time: j.dateAt ?? now, svc: j.svc, stageI: j.stage, subject: j.req?.subj ?? "",
+      },
+    });
+  };
+  for (const j of jobs) {
+    if (!j.propKnown || (j.stage === 4 && j.paid)) continue;
+    if (j.stage === 0 && !j.owner && now - j.stageAt > 30 * 60000) add("alerts", "unclaimed", "warning", j, j.stageAt + 30 * 60000);
+    if (j.stage === 0 && j.owner && !j.teamOk && now - (j.assignedAt ?? j.stageAt) > 4 * 3600000) add("alerts", "pendingLong", "warning", j, (j.assignedAt ?? j.stageAt) + 4 * 3600000);
+    if (j.unread) {
+      const lastIn = [...j.thread].reverse().find((m) => m.dir === "in");
+      add("alerts", "replyWait", "warning", j, lastIn?.t ?? now);
+    }
+    if (j.stage === 4 && j.qp && now - j.stageAt > 24 * 3600000) add("alerts", "quickpay", "critical", j, j.stageAt + 24 * 3600000);
+    if (j.stage === 1 && j.dateAt && !j.checkin && now > j.dateAt + 5 * 60000) add("alarms", "noCheckin", "critical", j, j.dateAt + 5 * 60000);
+    if (j.stage === 1 && j.dateAt && !j.teamOk && j.dateAt - now < 3600000 && j.dateAt > now) add("alarms", "noConfirm", "critical", j, j.dateAt - 3600000);
+    if (j.stage === 3 && j.evidence === 0) add("anomalies", "noEvidence", "critical", j, j.stageAt);
+    else if (j.stage === 3 && j.flag) add("anomalies", "tooShort", "critical", j, j.stageAt);
+  }
+  const byId = new Map(jobs.map((j) => [j.id, j]));
+  for (const r of recent) {
+    const j = byId.get("J" + r.job_id), key = EVENT_KEY[r.kind];
+    if (!j || !key) continue;
+    const t = Date.parse(r.at);
+    if (now - t > 6 * 3600000) continue;
+    add("actions", key, "info", j, t);
+    const e = out[out.length - 1];
+    e.id = hashId(`action|${r.job_id}|${r.at}|${r.kind}`);
+    e.open = false;
+  }
+  return out;
 }

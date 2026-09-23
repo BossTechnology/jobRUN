@@ -159,7 +159,10 @@ export async function loadBoard(): Promise<LiveBoard | null> {
     email: p.manager_email ?? "", code: `${p.state ?? ""}-${String(p.id).slice(0, 4)}`, beds: 0,
     team: p.default_team_id ? ctx.teamIdx.get(p.default_team_id) ?? 0 : 0,
   }));
+  const { data: recentEvents } = await sb.from("job_events").select("job_id,at,kind,actor_type")
+    .gte("at", new Date(Date.now() - 6 * 3600000).toISOString()).order("at", { ascending: false }).limit(500);
   return {
+    recentEvents: recentEvents ?? [],
     world: { customers, teams, props },
     jobs: jobRows.map((j) => mapJob(j, ctx)),
     operators: opRows.filter((o) => o.active).map((o) => ({ id: o.id, name: o.name, email: o.email })),

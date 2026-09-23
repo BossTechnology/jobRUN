@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ensureTrackerData, simTick, type ActionCtx } from "@/lib/board/actions";
 import { BoardProvider, type BoardCtx, type PMInit } from "@/lib/board/context";
-import { actionEvent, buildHistory, seedLive, tickEvents, TF_EVENTS, type HistoryView, type IntelType, type Timeframe } from "@/lib/board/events";
+import { actionEvent, buildHistory, deriveLiveEvents, seedLive, tickEvents, TF_EVENTS, type HistoryView, type IntelType, type Timeframe } from "@/lib/board/events";
 import { emptyFilters, matches as matchesFilters, type Filters } from "@/lib/board/filters";
 import { BoardStore } from "@/lib/board/store";
 import { CONFIG } from "@/lib/config";
@@ -129,7 +129,7 @@ export function JobRunApp({ initial }: { initial: LiveBoard | null }) {
       store.set(sim.seedJobs(saved));
       store.setEvents(seedLive(world, store.all()));
       setReady(true);
-    }
+    } else if (initial) store.setEvents(deriveLiveEvents(world, store.all(), initial.recentEvents));
   }, [initial, sim, store, world]);
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -143,11 +143,13 @@ export function JobRunApp({ initial }: { initial: LiveBoard | null }) {
       if (CONFIG.SIMULATE) {
         simTick(actionCtx, ticks.current);
         store.setEvents(tickEvents(world, store.all(), store.getEvents()).live);
+      } else if (initial) {
+        store.setEvents([...deriveLiveEvents(world, store.all(), initial.recentEvents), ...store.getEvents().filter((e) => e.local)]);
       }
       setNow(Date.now());
     }, 5000);
     return () => clearInterval(t);
-  }, [actionCtx, store, world]);
+  }, [actionCtx, store, world, initial]);
 
   /* Timeframe (onTimeChange / applyDate). */
   const time: TimeControl = {
