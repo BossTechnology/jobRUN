@@ -4,7 +4,8 @@
    configured. Outbound delivery (Gmail / TrueDialog) is not wired yet: messages are stored and mirrored only. */
 import { z } from "zod";
 import { currentOperator, jobColumns } from "@/lib/adapters/supabase";
-import { SERVICE_KEYS, type Job } from "@/lib/domain/types";
+import { SERVICE_KEYS, STAGES, type Job } from "@/lib/domain/types";
+import type { TablesInsert, TablesUpdate } from "@/lib/supabase/database.types";
 import { zendeskComment } from "@/lib/integrations/zendesk";
 import { createClient } from "@/lib/supabase/server";
 
@@ -19,7 +20,7 @@ const Body = z.object({
   teamIds: z.array(z.string()).max(1000),
 });
 
-const STAGE = ["pending", "scheduled", "in_progress", "complete", "validation"];
+const STAGE = STAGES;
 const iso = (t: number) => new Date(t).toISOString();
 
 export async function POST(req: Request) {
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
   const opId = (name: string | null) => (name ? ops?.find((o) => o.name === name)?.id ?? null : null);
   const teamId = (i: number | null) => (i == null ? null : teamIds[i] ?? null);
 
-  const cols: Record<string, unknown> = jobColumns(job, { opId, teamId });
+  const cols: TablesUpdate<"jobs"> = jobColumns(job, { opId, teamId });
   if (job.teamAsked && !prev.teamAsked) cols.team_asked_at = iso(Date.now());
   if (!job.teamAsked) cols.team_asked_at = null;
   if (cancelled) Object.assign(cols, { cancelled_at: iso(Date.now()), cancel_reason: cancelled.reason });
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
     writes.push(sb.from("job_actions").insert(newActions.map((a) => ({ job_id: id, at: iso(a.t), by_name: a.who, action: a.key, reason: a.reason, payload: { label: a.label } }))));
   if (newAddons.length)
     writes.push(sb.from("job_addons").insert(newAddons.map((a) => ({ job_id: id, at: iso(a.t), by_name: a.by, addon: a.k, price: a.price, cleaner_pay: a.pay, note: a.note }))));
-  const events: Record<string, unknown>[] = [];
+  const events: TablesInsert<"job_events">[] = [];
   if (prev.stage !== job.stage) events.push({ job_id: id, actor_type: "human", actor: me.name, from_stage: STAGE[prev.stage], to_stage: STAGE[job.stage], kind: "stage" });
   if (prev.owner !== job.owner) events.push({ job_id: id, actor_type: "human", actor: me.name, kind: "assign", detail: { from: prev.owner, to: job.owner } });
   if (cancelled) events.push({ job_id: id, actor_type: "human", actor: me.name, kind: "cancel", detail: { reason: cancelled.reason } });

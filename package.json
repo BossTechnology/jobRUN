@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit",
     "import:data": "node --env-file-if-exists=.env.local --import tsx scripts/import-data.mts",
     "geocode": "node --env-file-if-exists=.env.local --import tsx scripts/geocode-properties.mts",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:types": "supabase gen types typescript --project-id uvcivtqkdixosgulpwjd --schema public > lib/supabase/database.types.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.127.0",

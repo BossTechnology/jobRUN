@@ -3,10 +3,11 @@
    Reads use the operator's session, so RLS (private.is_operator()) applies. */
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { PROPERTY_TYPES, SERVICE_KEYS, stageIndex, type Customer, type Job, type Prop, type PropertyTypeCode, type Stage, type LiveBoard, type Operator, type Team, type ThreadMsg } from "@/lib/domain/types";
+import { PROPERTY_TYPES, SERVICE_KEYS, STAGES, stageIndex, type Customer, type Job, type Prop, type PropertyTypeCode, type Stage, type LiveBoard, type Operator, type Team, type ThreadMsg } from "@/lib/domain/types";
 import { etToEpoch } from "@/lib/domain/time";
+import type { Database, Json, TablesUpdate } from "@/lib/supabase/database.types";
 
-type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any -- untyped until `supabase gen types`
+type Row = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any -- DB rows are mapped field by field; see database.types.ts for the typed shapes
 type SB = Awaited<ReturnType<typeof createClient>>;
 
 const TYPE_CODE = Object.fromEntries(Object.entries(PROPERTY_TYPES).map(([k, v]) => [v, k])) as Record<string, PropertyTypeCode>;
@@ -14,7 +15,7 @@ const ts = (v: string | null) => (v ? Date.parse(v) : null);
 
 
 /* PostgREST caps responses at 1000 rows; page through. */
-async function all(sb: SB, table: string, select: string, filter?: (q: any) => any): Promise<Row[]> { // eslint-disable-line @typescript-eslint/no-explicit-any
+async function all(sb: SB, table: keyof Database["public"]["Tables"], select: string, filter?: (q: any) => any): Promise<Row[]> { // eslint-disable-line @typescript-eslint/no-explicit-any
   const out: Row[] = [];
   for (let from = 0; ; from += 1000) {
     let q = sb.from(table).select(select);
@@ -60,9 +61,9 @@ export function mapJob(j: Row, c: MapCtx): Job {
 }
 
 /** Board Job → jobs columns (used by /api/board/sync). */
-export function jobColumns(j: Job, ids: { opId: (name: string | null) => string | null; teamId: (i: number | null) => string | null }) {
+export function jobColumns(j: Job, ids: { opId: (name: string | null) => string | null; teamId: (i: number | null) => string | null }): TablesUpdate<"jobs"> {
   return {
-    stage: ["pending", "scheduled", "in_progress", "complete", "validation"][j.stage],
+    stage: STAGES[j.stage],
     stage_at: new Date(j.stageAt).toISOString(),
     property_id: j.propKnown ? j.prop : null,
     customer_id: j.cust || null,
@@ -86,7 +87,7 @@ export function jobColumns(j: Job, ids: { opId: (name: string | null) => string 
     rating_pinch: j.rating || null,
     evidence_pdf_sent: j.pdfSent,
     workapp_id: j.wa,
-    field_sources: j.fsrc,
+    field_sources: j.fsrc as Json,
   };
 }
 
@@ -162,7 +163,7 @@ export async function loadBoard(): Promise<LiveBoard | null> {
   const { data: recentEvents } = await sb.from("job_events").select("job_id,at,kind,actor_type")
     .gte("at", new Date(Date.now() - 6 * 3600000).toISOString()).order("at", { ascending: false }).limit(500);
   return {
-    recentEvents: recentEvents ?? [],
+    recentEvents: (recentEvents ?? []).filter((e): e is typeof e & { job_id: number } => e.job_id != null),
     world: { customers, teams, props },
     jobs: jobRows.map((j) => mapJob(j, ctx)),
     operators: opRows.filter((o) => o.active).map((o) => ({ id: o.id, name: o.name, email: o.email })),

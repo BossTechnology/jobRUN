@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const last10 = (s: string | null | undefined) => (s ?? "").replace(/\D/g, "").slice(-10);
 const YES = /\b(yes|yep|yeah|ok|okay|confirm(ed)?|s[ií]|confirmado)\b/i;
-const OPEN = ["pending", "scheduled", "in_progress"];
+const OPEN = ["pending", "scheduled", "in_progress"] as const;
 
 export interface InboundSms {
   from: string;
@@ -30,7 +30,7 @@ export async function handleInboundSms(msg: InboundSms) {
       .order("window_date", { ascending: true, nullsFirst: false }).limit(1).maybeSingle();
     if (!job) return { ok: true as const, matched: "team", job: null };
     await sb.from("messages").insert({ job_id: job.id, at: now, channel: "sms", direction: "in", from_name: team.name, from_addr: msg.from, body: msg.body, external_id: msg.externalId ?? null });
-    if (!job.team_confirmed && ["pending", "scheduled"].includes(job.stage) && YES.test(msg.body)) {
+    if (!job.team_confirmed && (job.stage === "pending" || job.stage === "scheduled") && YES.test(msg.body)) {
       await sb.from("jobs").update({ team_confirmed: true }).eq("id", job.id);
       await sb.from("job_events").insert({ job_id: job.id, actor_type: "system", actor: msg.channel, kind: "field", detail: { team_confirmed: true, via: "sms reply" } });
     }
