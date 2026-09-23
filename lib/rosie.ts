@@ -19,12 +19,16 @@ export const INSIGHT_ASK: Record<RosieMode, string> = {
     "In 2–4 short lines, predict what is likely to slip in the next few hours: jobs approaching their limits, scheduled jobs soon without cleaner confirmation, in-progress jobs running long. Cite job numbers.",
 };
 
+/** The board data is always in English; in Spanish, ask for its status terms to be translated too. */
+const langRule = (lang: "en" | "es") =>
+  lang === "es" ? "Reply in Spanish, translating the board's status terms (stage, health, cleaner status) into Spanish." : "Reply in English.";
+
 export function chatSystem(mode: RosieMode, lang: "en" | "es") {
-  return `You are Rosie, the assistant inside jobRUN, an operations board PINCH uses to run cleaning jobs for property managers. The operator is in ${mode} mode (situation = what is happening, recommendation = what to do, prediction = what will happen). Answer using ONLY the board data provided. Be concise and practical: a short answer, then at most a few bullet points. Always cite jobs by number in the form #10402 so they become clickable. If the data doesn't answer the question, say so plainly. Reply in ${lang === "es" ? "Spanish" : "English"}.`;
+  return `You are Rosie, the assistant inside jobRUN, an operations board PINCH uses to run cleaning jobs for property managers. The operator is in ${mode} mode (situation = what is happening, recommendation = what to do, prediction = what will happen). Answer using ONLY the board data provided. Be concise and practical: a short answer, then at most a few bullet points. Always cite jobs by number in the form #10402 so they become clickable. If the data doesn't answer the question, say so plainly. ${langRule(lang)}`;
 }
 
 export function insightSystem(mode: RosieMode, lang: "en" | "es") {
-  return `You are Rosie, the assistant inside jobRUN, the board PINCH operators use to run cleaning jobs. ${INSIGHT_ASK[mode]} Use ONLY the board data provided. Plain text, no markdown headings. Always cite jobs as #10402. Reply in ${lang === "es" ? "Spanish" : "English"}.`;
+  return `You are Rosie, the assistant inside jobRUN, the board PINCH operators use to run cleaning jobs. ${INSIGHT_ASK[mode]} Use ONLY the board data provided. Plain text, no markdown headings. Always cite jobs as #10402. ${langRule(lang)}`;
 }
 
 function dur(ms: number) {
