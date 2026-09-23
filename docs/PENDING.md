@@ -2,7 +2,7 @@
 
 Status as of Sep 23, 2026. The app is deployed at https://jobrun-chi.vercel.app in **simulation mode**: the full
 prototype (board, job modals, header, filters, map, Rosie) runs on PINCH's 1,479 real properties with simulated jobs.
-Everything below is what's needed to switch it to real operations.
+Rosie is live (ANTHROPIC_API_KEY set Sep 23). Everything below is what's needed to switch to real operations.
 
 ## 1. Accounts and access (BOSS / Federico)
 
@@ -10,7 +10,6 @@ Everything below is what's needed to switch it to real operations.
 |---|---|---|
 | Operator accounts | Nobody can sign in until each operator exists in Supabase Auth **and** in the `operators` table | Supabase → Authentication → Add user; `insert into operators (name, email) …` |
 | Switch to live data | After operators exist | Vercel env `NEXT_PUBLIC_SIMULATE=false`, redeploy |
-| Anthropic API key | Rosie (chat, insight cards) | Vercel env `ANTHROPIC_API_KEY` |
 | Vercel ↔ GitHub | Automatic deploys on push | Install the Vercel GitHub App on the BossTechnology org, then `vercel git connect` |
 | Magic-link sign-in (optional) | Password sign-in already works | Supabase → Auth → URL Configuration → add `https://<domain>/auth/callback` |
 | Resend key + sender (optional) | Email the evidence PDF to the property manager on validation | `RESEND_API_KEY`, `REPORT_FROM` |
