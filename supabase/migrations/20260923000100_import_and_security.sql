@@ -15,7 +15,7 @@ alter table properties
   add column import_key       text unique;   -- name|address1|postal_code, lower-cased
 
 -- Keep geom in sync with lat/lng so geocoding only has to write lat/lng.
-create or replace function properties_sync_geom() returns trigger language plpgsql as $$
+create or replace function properties_sync_geom() returns trigger language plpgsql set search_path = public as $$
 begin
   if new.lat is not null and new.lng is not null then
     new.geom := st_setsrid(st_makepoint(new.lng, new.lat), 4326)::geography;
