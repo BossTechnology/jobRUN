@@ -7,6 +7,7 @@ import type { Simulator } from "@/lib/sim/seed";
 import type { WorldIndex } from "@/lib/sim/world";
 import type { HistoryView, LiveEvent, Timeframe } from "./events";
 import type { Filters } from "./filters";
+import type { MapFilter } from "@/lib/map/model";
 import type { BoardStore } from "./store";
 
 /** Modal state seeds, applied when a job modal opens (the prototype's PM object). */
@@ -40,6 +41,9 @@ export interface BoardCtx {
   view: HistoryView | null;
   /** Map-location modal for a job (the prototype's openMap). */
   openMap: (id: string) => void;
+  /** Map mode on/off and its map-only filters. */
+  mapF: MapFilter;
+  setMapF: (fn: (m: MapFilter) => MapFilter) => void;
 }
 
 const Ctx = createContext<BoardCtx | null>(null);

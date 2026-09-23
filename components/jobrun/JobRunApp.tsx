@@ -18,7 +18,9 @@ import { ConfigSidebar, Header, type TimeControl } from "./Header";
 import { IntelModal } from "./IntelModal";
 import { JobModal, type ModalState } from "./modal/JobModal";
 import { MapModal } from "./modal/MapModal";
+import { MapMode } from "./MapMode";
 import { Rail, type FlySection } from "./Rail";
+import { MAP_OFF, type MapFilter } from "@/lib/map/model";
 
 const LANG_KEY = "jm_lang", LOGO_KEY = "jm_logo";
 const load = (k: string) => {
@@ -45,6 +47,8 @@ export function JobRunApp({ initial }: { initial: { world: World; jobs: Job[] } 
   const [tf, setTf] = useState<Timeframe>("now");
   const [view, setView] = useState<HistoryView | null>(null);
   const [rangeText, setRangeText] = useState<string | null>(null);
+  const [mapF, setMapFState] = useState<MapFilter>(MAP_OFF);
+  const setMapF = useCallback((fn: (m: MapFilter) => MapFilter) => setMapFState(fn), []);
   const openJobId = useRef<string | null>(null);
 
   const world = useMemo(() => indexWorld(initial?.world ?? buildSimWorld()), [initial]);
@@ -89,7 +93,10 @@ export function JobRunApp({ initial }: { initial: { world: World; jobs: Job[] } 
   }, []);
 
   const setFilters = useCallback((fn: (f: Filters) => Filters) => setFilterState(fn), []);
-  const clearFilters = useCallback(() => setFilterState(emptyFilters()), []);
+  const clearFilters = useCallback(() => {
+    setFilterState(emptyFilters());
+    setMapFState((m) => ({ ...MAP_OFF, on: m.on }));
+  }, []);
   const matches = useCallback((j: Job) => matchesFilters(filters, world, j, now), [filters, world, now]);
 
   /* jumpTo(): close panels, clear filters hiding the job, reveal its card, then open it. */
@@ -168,7 +175,7 @@ export function JobRunApp({ initial }: { initial: { world: World; jobs: Job[] } 
 
   const ctx: BoardCtx = {
     w: world, store, sim, lang, l: strings(lang), now, toast, openJob, closeModal, flash,
-    filters, setFilters, clearFilters, matches, paidOpen, setPaidOpen, jumpTo, tf, view, openMap,
+    filters, setFilters, clearFilters, matches, paidOpen, setPaidOpen, jumpTo, tf, view, openMap, mapF, setMapF,
   };
 
   return (
@@ -198,7 +205,7 @@ export function JobRunApp({ initial }: { initial: { world: World; jobs: Job[] } 
       />
       <div className="mm-shell">
         <Rail fly={fly} setFly={setFly} />
-        {ready && <Board flashId={flashId} />}
+        {ready && (mapF.on ? <MapMode /> : <Board flashId={flashId} />)}
       </div>
       {overlay?.kind === "job" && <JobModal modal={overlay.modal} reopen={(init) => openJob(overlay.modal.id, init)} />}
       {overlay?.kind === "map" && <MapModal id={overlay.id} onClose={closeModal} />}

@@ -7,6 +7,7 @@ import { ago, evText, SEV_C, type LiveEvent } from "@/lib/board/events";
 import { catalog, hasFilters, suggestions, type HealthBand, type Tag } from "@/lib/board/filters";
 import { fmtDate, jobNo } from "@/lib/domain/time";
 import { SERVICES } from "@/lib/domain/types";
+import { indexByProp, mapFiltersOn, mapJobs, propMatches } from "@/lib/map/model";
 import { Icon, P } from "@/lib/ui/icons";
 
 export type FlySection = "observe" | "geo" | "incidents" | "activity" | "bobee";
@@ -209,8 +210,14 @@ function GeoPanel() {
 }
 
 export function Rail({ fly, setFly }: { fly: FlySection | null; setFly: (s: FlySection | null) => void }) {
-  const { l, filters, clearFilters, matches, tf, now } = useBoard();
+  const { w, l, filters, clearFilters, matches, tf, now, mapF, setMapF } = useBoard();
   const jobs = useJobs();
+  /* In map mode the focus chip counts locations, like the prototype's applyFocusChip(). */
+  const mapScope = useMemo(() => {
+    if (!mapF.on) return null;
+    const byProp = indexByProp(mapJobs(jobs, matches, mapF, now));
+    return { n: w.props.filter((p) => propMatches(filters, mapF, byProp, p, now)).length, of: w.props.length };
+  }, [mapF, jobs, matches, now, w, filters]);
   const scope = useEventScope();
   const railRef = useRef<Record<string, HTMLButtonElement | null>>({});
   const prevFly = useRef<FlySection | null>(null);
@@ -230,7 +237,7 @@ export function Rail({ fly, setFly }: { fly: FlySection | null; setFly: (s: FlyS
     geo: filters.geo.length + filters.types.size,
     activity: tf === "now" ? scope.filter((e) => now - e.t < 600000).length : 0,
   };
-  const filt = hasFilters(filters);
+  const filt = hasFilters(filters) || (mapF.on && mapFiltersOn(mapF));
   const rb = (s: FlySection, title: string, d: string, big = false) => (
     <button
       key={s}
@@ -257,15 +264,20 @@ export function Rail({ fly, setFly }: { fly: FlySection | null; setFly: (s: FlyS
         {rb("geo", l.rGeo, IC.geo)}
         {rb("incidents", l.rIncidents, IC.incidents, true)}
         {rb("activity", l.rActivity, IC.activity)}
-        {/* Map mode lands with Mapbox (INTEGRATION.md §6). */}
-        <button className="mm-rb" title={l.mapMode} aria-label={l.mapMode} disabled style={{ opacity: 0.4, cursor: "default" }}>
+        <button
+          className={`mm-rb${mapF.on ? " open" : ""}`}
+          title={l.mapMode}
+          aria-label={l.mapMode}
+          aria-pressed={mapF.on}
+          onClick={() => setMapF((m) => ({ ...m, on: !m.on }))}
+        >
           <span className="mm-rb-ic"><RailIcon d={IC.map} /></span>
         </button>
         <div className="mm-rail-gap" />
         <div className={`mm-focus${filt ? " show" : ""}`} role="status">
           <span className="mm-focus-lbl">{l.focus}</span>
-          <strong>{jobs.filter(matches).length.toLocaleString()}</strong>
-          <span className="mm-focus-of">{l.of} {jobs.length.toLocaleString()}</span>
+          <strong>{(mapScope ? mapScope.n : jobs.filter(matches).length).toLocaleString()}</strong>
+          <span className="mm-focus-of">{l.of} {(mapScope ? mapScope.of : jobs.length).toLocaleString()}</span>
           <button className="mm-focus-x" onClick={clearFilters} aria-label={l.clearAll}>×</button>
         </div>
         <div className="mm-rail-gap" />

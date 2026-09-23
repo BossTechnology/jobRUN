@@ -32,7 +32,7 @@ function Timer({ j }: { j: Job }) {
   return out(p[0], p[1], h === "bad" || h === "crit" ? "bad" : h === "risk" ? "risk" : "");
 }
 
-function Card({ j, flashing }: { j: Job; flashing: boolean }) {
+export function Card({ j, flashing = false }: { j: Job; flashing?: boolean }) {
   const { w, l, lang, now, openJob } = useBoard();
   const ref = useRef<HTMLElement>(null);
   const p = w.prop(j.prop);
