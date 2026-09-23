@@ -2,7 +2,7 @@
 /* HEADER — logo/config, timeframe, live clock, intelligence buttons, operator switcher.
    Ported from the prototype's header markup, onTimeChange() / applyDate() / updateTimeLabel() / renderBadges()
    / teamSelHtml() and the CONFIG sidebar. */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useBoard, useEventScope, useJobs } from "@/lib/board/context";
 import { CONFIG } from "@/lib/config";
 import { countFor, INTEL_TYPES, type IntelType, type Timeframe } from "@/lib/board/events";
@@ -14,6 +14,29 @@ import { ME, OPS } from "@/lib/operators";
 import { workload } from "@/lib/domain/health";
 import { Icon, P } from "@/lib/ui/icons";
 import { CapMeter } from "./modal/parts";
+import { canSpeak, chosenVoice, setVoice, voicesFor } from "@/lib/ui/speech";
+
+/* Voices load asynchronously; re-read them when the browser announces changes. */
+const subscribeVoices = (cb: () => void) => {
+  if (!canSpeak()) return () => {};
+  speechSynthesis.addEventListener("voiceschanged", cb);
+  return () => speechSynthesis.removeEventListener("voiceschanged", cb);
+};
+const voiceKey = () => (canSpeak() ? speechSynthesis.getVoices().length : 0);
+
+function VoiceSelect({ lang }: { lang: Lang }) {
+  const { l } = useBoard();
+  const n = useSyncExternalStore(subscribeVoices, voiceKey, () => 0);
+  const [picked, setPicked] = useState<string | null>(null);
+  const list = n ? voicesFor(lang).slice(0, 14) : [];
+  if (!list.length) return <select className="sb-select" disabled aria-label="Voice"><option>{l.st2.noVoices}</option></select>;
+  const cur = picked ?? chosenVoice(lang)?.name ?? list[0].name;
+  return (
+    <select className="sb-select" value={cur} aria-label="Voice" onChange={(e) => { setPicked(e.target.value); setVoice(lang, e.target.value); }}>
+      {list.map((v) => <option key={v.name} value={v.name}>{v.name.replace(/Microsoft |Google /, "")}</option>)}
+    </select>
+  );
+}
 
 export interface TimeControl {
   tf: Timeframe;
@@ -254,6 +277,11 @@ export function ConfigSidebar({ open, onClose, logo, lang, onApply }: { open: bo
                 </span>
               </div>
             )}
+          </div>
+          <div className="sb-section">
+            <div className="sb-title">{l.voice}</div>
+            <VoiceSelect lang={pickLang} />
+            <div className="logo-hint">{l.voiceHint}</div>
           </div>
           <div className="sb-section">
             <div className="sb-title">{l.language}</div>

@@ -1,5 +1,5 @@
 /* POST /api/rosie — Rosie with the Anthropic key server-side (INTEGRATION.md §9).
-   Body: { kind: "chat" | "insight", mode, scope, lang, turns, jobIds?, snapshot? }
+   Body: { kind: "chat" | "insight", mode, scope, lang, turns, jobIds?, filters?, snapshot? }
    Live: the board snapshot is built here from Supabase; the client only sends the ids visible under its
    filters when scope is "focus". Simulation: the board exists only in the browser, so the client sends
    its snapshot (lib/rosie.ts boardSnapshot). Response: streamed plain text. */
@@ -18,6 +18,7 @@ const Body = z.object({
   lang: z.enum(["en", "es"]).default("en"),
   jobIds: z.array(z.string()).max(2000).optional(),
   snapshot: z.string().max(60000).optional(),
+  filters: z.array(z.string().max(200)).max(30).optional(),
   turns: z
     .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(4000) }))
     .max(8)
@@ -52,6 +53,7 @@ export async function POST(req: Request) {
       operator,
       scope,
       tz: CONFIG.BUSINESS_TZ,
+      filters: parsed.data.filters,
     });
   } else if (parsed.data.snapshot) snapshot = parsed.data.snapshot;
   else return Response.json({ error: "snapshot is required in simulation mode" }, { status: 400 });

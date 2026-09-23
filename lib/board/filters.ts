@@ -106,3 +106,14 @@ export function suggestions(sec: "observe" | "geo", q: string, have: Tag[], all:
   });
   return groups;
 }
+
+/** Filters as short text for Rosie's snapshot and insight cache key (filterText). */
+export function filterText(F: Filters): string[] {
+  const f: string[] = [];
+  if (F.health.size) f.push("health=" + [...F.health].join("/"));
+  F.observe.forEach((t) => f.push(t.kind + "=" + t.label));
+  F.geo.forEach((t) => f.push("place=" + t.label + (t.kind === "city" || t.kind === "zip" ? " within " + F.radius + " mi" : "")));
+  if (F.types.size) f.push("type=" + [...F.types].join("/"));
+  if (!opsAll(F)) f.push("operators=" + [...F.ops].map((x) => (x === UNASSIGNED ? "Unassigned" : x)).join("/"));
+  return f;
+}

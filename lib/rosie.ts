@@ -38,7 +38,7 @@ const fmtET = (ms: number, tz: string) =>
   new Date(ms).toLocaleString("en-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 /** Same columns as the prototype's boardSnapshot(), capped at 140 rows. */
-export function boardSnapshot(opts: { jobs: Job[]; total: number; prop: (id: string) => Prop | undefined; teams: Team[]; operator: string; scope: RosieScope; tz: string; now?: number }) {
+export function boardSnapshot(opts: { jobs: Job[]; total: number; prop: (id: string) => Prop | undefined; teams: Team[]; operator: string; scope: RosieScope; tz: string; now?: number; filters?: string[] }) {
   const now = opts.now ?? Date.now();
   const rows = opts.jobs.slice(0, 140).map((j) => {
     const p = j.propKnown ? opts.prop(j.prop) : undefined;
@@ -60,7 +60,7 @@ export function boardSnapshot(opts: { jobs: Job[]; total: number; prop: (id: str
     ].join(" | ");
   });
   return `Logged-in operator: ${opts.operator}. Current time (ET): ${fmtET(now, opts.tz)}. Scope: ${
-    opts.scope === "global" ? "GLOBAL — every job in the operation, board filters ignored" : "FOCUSED — only what is visible on the board"
+    opts.scope === "global" ? "GLOBAL — every job in the operation, board filters ignored" : "FOCUSED — only what is visible on the board; filters: " + (opts.filters?.length ? opts.filters.join("; ") : "none")
   }. Jobs in scope: ${opts.jobs.length} of ${opts.total}.
 Columns: job | property | city | stage | service | property type | owner | timing | health | messages | payment | cleaning team | cleaner status
 ${rows.join("\n")}`;

@@ -9,6 +9,7 @@ import { fmtDate, jobNo } from "@/lib/domain/time";
 import { SERVICES } from "@/lib/domain/types";
 import { indexByProp, mapFiltersOn, mapJobs, propMatches } from "@/lib/map/model";
 import { Icon, P } from "@/lib/ui/icons";
+import { RosiePanel } from "./Rosie";
 
 export type FlySection = "observe" | "geo" | "incidents" | "activity" | "bobee";
 
@@ -295,21 +296,12 @@ export function Rail({ fly, setFly }: { fly: FlySection | null; setFly: (s: FlyS
       </nav>
       <div className={`mm-fly-backdrop${fly ? " open" : ""}`} onClick={() => setFly(null)} aria-hidden="true" />
       <aside className={`mm-fly${fly ? " open" : ""}`} id="mmFly" tabIndex={-1}>
-        {fly && (
+        {fly && fly !== "bobee" && (
           <section className="mm-sec active">
-            {fly === "bobee" ? (
-              <div className="mm-fly-hd jm-rh">
-                {/* eslint-disable-next-line @next/next/no-img-element -- Rosie avatar from the prototype */}
-                <img className="jm-rh-img" src="/icons/rosie.png" alt="" />
-                <span className="jm-rh-name">ROSIE</span>
-                <button className="mm-fly-x" onClick={() => setFly(null)} aria-label="Close">×</button>
-              </div>
-            ) : (
-              <div className="mm-fly-hd">
-                <div className="mm-fly-title">{titles[fly]}</div>
-                <button className="mm-fly-x" onClick={() => setFly(null)} aria-label="Close">×</button>
-              </div>
-            )}
+            <div className="mm-fly-hd">
+              <div className="mm-fly-title">{titles[fly]}</div>
+              <button className="mm-fly-x" onClick={() => setFly(null)} aria-label="Close">×</button>
+            </div>
             {fly === "observe" && <ObservePanel />}
             {fly === "geo" && <GeoPanel />}
             {fly === "incidents" && (
@@ -325,10 +317,10 @@ export function Rail({ fly, setFly }: { fly: FlySection | null; setFly: (s: FlyS
                 {ev.length ? ev.slice(0, 25).map((e) => <Feed key={e.id} e={e} />) : <div className="jm-empty">{l.noActivity}</div>}
               </div>
             )}
-            {/* TODO(rosie): port the ROSIE section (modes, scope, insight card, chat, voice) against /api/rosie. */}
-            {fly === "bobee" && <div className="mm-sec-body"><div className="jm-empty">{l.rosieSoon}</div></div>}
           </section>
         )}
+        {/* Rosie stays mounted so the conversation survives closing the panel. */}
+        <RosiePanel open={fly === "bobee"} onClose={() => setFly(null)} />
       </aside>
     </>
   );
