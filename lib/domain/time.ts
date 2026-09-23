@@ -59,12 +59,31 @@ export function plus2(t: string, h = 2) {
   return String(Math.min(23, a + h)).padStart(2, "0") + ":" + String(b).padStart(2, "0");
 }
 
-/** ET wall-clock date + time → epoch ms. Same fixed UTC-4 offset as the prototype.
- *  TODO(prod): resolve the real offset (EST is UTC-5 from November to March). */
+/** Offset of America/New_York from UTC, in minutes, at a given instant (−240 in summer, −300 in winter). */
+function etOffsetMin(at: number) {
+  const p: Record<string, string> = {};
+  new Intl.DateTimeFormat("en-US", { timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+    .formatToParts(new Date(at))
+    .forEach((x) => (p[x.type] = x.value));
+  return (Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - at) / 60000;
+}
+
+/** ET wall-clock date + time → epoch ms (DST-aware; the prototype assumed UTC−4 all year). */
 export function etToEpoch(date: string, time?: string) {
   const [y, m, d] = date.split("-").map(Number);
   const [h, mi] = (time || "09:00").split(":").map(Number);
-  return Date.UTC(y, m - 1, d, h + 4, mi);
+  const guess = Date.UTC(y, m - 1, d, h, mi);
+  const first = guess - etOffsetMin(guess) * 60000;
+  return guess - etOffsetMin(first) * 60000;
+}
+
+/** Epoch ms → ET wall-clock ["YYYY-MM-DD", "HH:MM"] for the DB's zone-less window columns. */
+export function epochToET(at: number): [string, string] {
+  const p: Record<string, string> = {};
+  new Intl.DateTimeFormat("en-US", { timeZone: TZ, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+    .formatToParts(new Date(at))
+    .forEach((x) => (p[x.type] = x.value));
+  return [`${p.year}-${p.month}-${p.day}`, `${p.hour}:${p.minute}`];
 }
 
 export function sameETDay(a: number, b: number) {

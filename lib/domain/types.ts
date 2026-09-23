@@ -163,3 +163,19 @@ export interface Job {
   tEnd?: number;
   cnote?: string;
 }
+
+export interface Operator {
+  id: string;
+  name: string;
+  email: string | null;
+}
+
+/** What the server hands the client in live mode (lib/adapters/supabase.ts loadBoard). */
+export interface LiveBoard {
+  world: World;
+  jobs: Job[];
+  operators: Operator[];
+  /** cleaning_teams ids in World.teams order (the board stores team indexes) */
+  teamIds: string[];
+  me: Operator;
+}

@@ -1,13 +1,10 @@
-/* Adapter switch (INTEGRATION.md §4). With CONFIG.SIMULATE the browser generates the board itself
-   (lib/sim), exactly like the prototype; otherwise the server loads it from Supabase.
+/* Adapter switch (INTEGRATION.md §4). With CONFIG.SIMULATE the browser generates the board itself (lib/sim),
+   exactly like the prototype; otherwise the server loads it from Supabase for the signed-in operator, the
+   browser follows Realtime changes (components/jobrun/LiveSync.tsx) and writes go through /api/board/sync.
 
-   Still to implement, per INTEGRATION.md §4:
-   - subscribeJobs(cb)            → Supabase Realtime on jobs, messages, job_events (client side)
-   - sendMessage(job, ch, text)   → /api/out/* : Gmail send · TrueDialog SMS · Zendesk mirror
-   - recordAction(job, action, reason) → job_actions + job_events + Zendesk comment
-   - writeWorkApp(job)            → /api/out/workapp
-   - loadTraffic(bounds)          → TomTom flow tiles (map layer)
-   - loadWeather(states)          → OpenWeather per state centroid, 10-min cache */
+   Still to implement against PINCH's systems (need their credentials / API contracts):
+   - sendMessage delivery → Gmail send (email), TrueDialog (SMS); messages are stored and mirrored to Zendesk today
+   - writeWorkApp(job) → /api/out/workapp */
 import "server-only";
 import { CONFIG } from "@/lib/config";
 

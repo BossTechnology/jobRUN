@@ -32,16 +32,9 @@ export async function POST(req: Request) {
   const { kind, mode, scope, lang, jobIds, turns } = parsed.data;
   if (kind === "chat" && turns.at(-1)?.role !== "user") return Response.json({ error: "last turn must be the user's question" }, { status: 400 });
 
-  let operator = "Federico";
-  if (!CONFIG.SIMULATE) {
-    const { createClient } = await import("@/lib/supabase/server");
-    const { data } = await (await createClient()).auth.getUser();
-    if (!data.user) return Response.json({ error: "unauthorized" }, { status: 401 });
-    operator = data.user.email ?? operator;
-  }
-
   let snapshot: string;
   const board = await loadBoard();
+  if (!CONFIG.SIMULATE && !board) return Response.json({ error: "unauthorized" }, { status: 401 });
   if (board) {
     const props = new Map(board.world.props.map((p) => [p.id, p]));
     const ids = scope === "focus" && jobIds ? new Set(jobIds) : null;
@@ -50,7 +43,7 @@ export async function POST(req: Request) {
       total: board.jobs.length,
       prop: (id) => props.get(id),
       teams: board.world.teams,
-      operator,
+      operator: board.me.name,
       scope,
       tz: CONFIG.BUSINESS_TZ,
       filters: parsed.data.filters,

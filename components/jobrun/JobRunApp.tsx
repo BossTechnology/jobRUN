@@ -9,8 +9,9 @@ import { emptyFilters, matches as matchesFilters, type Filters } from "@/lib/boa
 import { BoardStore } from "@/lib/board/store";
 import { CONFIG } from "@/lib/config";
 import { fmtDate } from "@/lib/domain/time";
-import type { Job, World } from "@/lib/domain/types";
+import type { Job, LiveBoard } from "@/lib/domain/types";
 import { strings, type Lang } from "@/lib/i18n";
+import { setOperators } from "@/lib/operators";
 import { Simulator } from "@/lib/sim/seed";
 import { buildSimWorld, indexWorld } from "@/lib/sim/world";
 import { Board } from "./Board";
@@ -18,6 +19,7 @@ import { ConfigSidebar, Header, type TimeControl } from "./Header";
 import { IntelModal } from "./IntelModal";
 import { JobModal, type ModalState } from "./modal/JobModal";
 import { MapModal } from "./modal/MapModal";
+import { LiveSync } from "./LiveSync";
 import { MapMode } from "./MapMode";
 import { Rail, type FlySection } from "./Rail";
 import { MAP_OFF, type MapFilter } from "@/lib/map/model";
@@ -32,7 +34,9 @@ const save = (k: string, v: string | null) => {
 
 type Overlay = { kind: "job"; modal: ModalState } | { kind: "map"; id: string } | { kind: "intel"; type: IntelType } | null;
 
-export function JobRunApp({ initial }: { initial: { world: World; jobs: Job[] } | null }) {
+export function JobRunApp({ initial }: { initial: LiveBoard | null }) {
+  // Live mode: the signed-in operator and the team come from Supabase (module-level, read by the ported logic).
+  if (initial) setOperators(initial.me.name, initial.operators.map((o) => o.name));
   const [lang, setLang] = useState<Lang>("en");
   const [logo, setLogo] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -63,6 +67,7 @@ export function JobRunApp({ initial }: { initial: { world: World; jobs: Job[] } 
   }, [store, world]);
 
   const toast = useCallback((text: string) => setToastMsg((t) => ({ text, n: (t?.n ?? 0) + 1 })), []);
+  const syncError = useCallback((msg: string) => toast((lang === "es" ? "No se pudo guardar: " : "Couldn't save: ") + msg), [toast, lang]);
   useEffect(() => {
     if (!toastMsg) return;
     const t = setTimeout(() => setToastMsg(null), 2400);
@@ -210,6 +215,7 @@ export function JobRunApp({ initial }: { initial: { world: World; jobs: Job[] } 
       {overlay?.kind === "job" && <JobModal modal={overlay.modal} reopen={(init) => openJob(overlay.modal.id, init)} />}
       {overlay?.kind === "map" && <MapModal id={overlay.id} onClose={closeModal} />}
       {overlay?.kind === "intel" && <IntelModal type={overlay.type} rangeText={viewText} onClose={closeModal} />}
+      {initial && <LiveSync store={store} teamIds={initial.teamIds} onError={syncError} />}
       <div className={`jm-toast${toastMsg ? " show" : ""}`} role="status">
         {toastMsg?.text}
       </div>
