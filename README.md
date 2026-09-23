@@ -41,20 +41,25 @@ Still needed from PINCH before going live: the cleaning-team (Pro) list for `cle
 | Path | What |
 |---|---|
 | `lib/config.ts` | `CONFIG` switches, same as the prototype |
-| `lib/domain/` | Job/property types and the ported pure functions (`health`, `thresholdFor`, `isBad`, `incKind`, sort orders, `isBizHours`) |
-| `lib/adapters/` | `loadProperties` / `loadJobs` with simulated and Supabase implementations |
+| `app/prototype.css` | The prototype's styles, copied verbatim (only font variables changed) |
+| `lib/domain/` | Job/property types, ET date helpers and the ported pure functions (`health`, `thresholdFor`, `isBad`, `incKind`, `priceOf`, sort orders) |
+| `lib/i18n/` | English/Spanish UI strings, generated from the prototype |
+| `lib/sim/` | Browser-side simulation (PINCH world + seeded jobs), used while `NEXT_PUBLIC_SIMULATE=true` |
+| `lib/board/` | Client job store, board context and the ported job actions |
+| `lib/adapters/` | `loadBoard()` from Supabase for live mode |
+| `components/jobrun/` | Board, job modal (Pending/Scheduled and In Progress/Complete/Validation), actions footer, job report |
 | `lib/supabase/` | browser, server (operator session) and admin (service role) clients |
 | `lib/rosie.ts`, `app/api/rosie` | Rosie prompts and board snapshot built server-side; streams plain text |
 | `app/api/in/*`, `app/api/out/*` | Integration routes — stubs returning 501 until each contract is confirmed |
 | `app/api/cron/automated-messages` | Minute cron for confirmation / check-in texts (`vercel.json`; needs Vercel Pro) |
-| `components/Board.tsx` | First cut of the five-lane board |
 
 ## Porting status (INTEGRATION.md §11)
 
 - [x] Next.js app, env vars, schema, import + geocoding scripts
-- [x] Health/threshold logic ported; five lanes with prototype sort orders and card states
+- [x] Board: five lanes, card states, clocks, paid row, simulation tick (payments, follow-ups, new requests, auto-confirm)
+- [x] Job modal: Pending (AI sender, AI/You fields, window, cleaner availability, gates), Scheduled edit, Stage tabs (details, Job Tracker with photos, billing/audit), Actions with reasons, add-ons, approve/reject, job report
 - [x] `/api/rosie` server-side with the Anthropic key; webhook and cron routes scaffolded
-- [ ] Port the rest of the board (icons, live ticking, paid row), then modal → filters/rail → map → Rosie UI
+- [ ] Header (timeframe, Alerts/Alarms/Anomalies/Actions, operator switcher) → filters/rail → map → Rosie UI
 - [ ] Mapbox GL base, 3D buildings, TomTom traffic, OpenWeather
 - [ ] Operator auth (Supabase Auth) and Realtime subscriptions
 - [ ] Each integration, flipping out of simulation as it lands

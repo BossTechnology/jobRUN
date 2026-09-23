@@ -1,7 +1,7 @@
-/* Rosie prompt building, moved server-side from the prototype's askRosie() / loadInsight() / boardSnapshot(). */
-import "server-only";
+/* Rosie prompts and board snapshot, from the prototype's askRosie() / loadInsight() / boardSnapshot().
+   Shared: /api/rosie builds the snapshot from Supabase; in simulation the browser builds it from its own board. */
 import { health } from "@/lib/domain/health";
-import { SERVICES, type Job, type Property } from "@/lib/domain/types";
+import { SERVICES, type Job, type Prop, type Team } from "@/lib/domain/types";
 
 export type RosieMode = "situation" | "recommendation" | "prediction";
 export type RosieScope = "focus" | "global";
@@ -38,29 +38,30 @@ const fmtET = (ms: number, tz: string) =>
   new Date(ms).toLocaleString("en-US", { timeZone: tz, weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 /** Same columns as the prototype's boardSnapshot(), capped at 140 rows. */
-export function boardSnapshot(opts: { jobs: Job[]; total: number; props: Map<string, Property>; operator: string; scope: RosieScope; tz: string; now?: number }) {
+export function boardSnapshot(opts: { jobs: Job[]; total: number; prop: (id: string) => Prop | undefined; teams: Team[]; operator: string; scope: RosieScope; tz: string; now?: number }) {
   const now = opts.now ?? Date.now();
   const rows = opts.jobs.slice(0, 140).map((j) => {
-    const p = j.prop ? opts.props.get(j.prop) : undefined;
+    const p = j.propKnown ? opts.prop(j.prop) : undefined;
     const ref = j.stage === 0 && j.owner ? (j.assignedAt ?? j.stageAt) : j.stageAt;
     return [
       "#" + j.id.replace(/^J/, ""),
-      p?.name ?? "(unknown property)",
-      p ? `${p.city}, ${p.state}` : "",
+      p?.n ?? `(unknown property; sender ${j.req?.from ?? ""})`,
+      p ? `${p.city}, ${p.st}` : "",
       STAGE_NAMES[j.stage],
-      j.svc != null ? SERVICES[j.svc] : "",
+      SERVICES.en[j.svc],
       p ? TYPE_NAMES[p.type] : "",
       j.owner ?? "Unassigned",
       j.stage === 1 && j.dateAt ? "scheduled " + fmtET(j.dateAt, opts.tz) : "in stage " + dur(now - ref),
       j.delayed ? "marked delayed" : HEALTH_TXT[health(j, now)],
       j.unread ? "UNANSWERED MESSAGE" : "",
       j.paid ? "paid" : "",
+      j.team != null ? opts.teams[j.team]?.[0] ?? "" : "",
       j.teamOk ? "cleaner confirmed" : "cleaner not confirmed",
     ].join(" | ");
   });
   return `Logged-in operator: ${opts.operator}. Current time (ET): ${fmtET(now, opts.tz)}. Scope: ${
     opts.scope === "global" ? "GLOBAL — every job in the operation, board filters ignored" : "FOCUSED — only what is visible on the board"
   }. Jobs in scope: ${opts.jobs.length} of ${opts.total}.
-Columns: job | property | city | stage | service | property type | owner | timing | health | messages | payment | cleaner status
+Columns: job | property | city | stage | service | property type | owner | timing | health | messages | payment | cleaning team | cleaner status
 ${rows.join("\n")}`;
 }

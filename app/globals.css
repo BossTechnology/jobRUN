@@ -1,15 +1,10 @@
-/* Board styles are being ported from public/prototype.html (INTEGRATION.md §11.2).
-   Token names match the prototype so copied rules drop in unchanged. */
+/* App-level additions on top of app/prototype.css (the verbatim prototype styles). */
 :root {
-  --black: #111;
-  --red: #d62828;
-  --gray-border: #d8dce4;
-  --gray-light: #9aa1ad;
-  --accent: #c6e7ff;
-  --font: var(--font-dm-sans), "DM Sans", sans-serif;
-  --font-cond: var(--font-barlow), "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font: var(--font-dm-sans), sans-serif;
 }
 
-* { box-sizing: border-box; }
-html, body { margin: 0; height: 100%; }
-body { font-family: var(--font); color: var(--black); background: #f2f3f5; -webkit-font-smoothing: antialiased; }
+/* Until the filter rail is ported, the board takes the full width. */
+.mm-shell.jr-norail { grid-template-columns: minmax(0, 1fr) !important; }
+
+.jr-sim { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--accent); margin-right: 10px; }
+.jr-lang { width: auto; margin-right: 14px; }

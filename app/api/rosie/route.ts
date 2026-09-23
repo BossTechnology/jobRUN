@@ -1,11 +1,12 @@
 /* POST /api/rosie — Rosie with the Anthropic key server-side (INTEGRATION.md §9).
-   Body: { kind: "chat" | "insight", mode, scope, lang, turns, jobIds? }
-   The board snapshot is built here from the adapters; the client only sends the ids visible
-   under its filters when scope is "focus". Response: streamed plain text. */
+   Body: { kind: "chat" | "insight", mode, scope, lang, turns, jobIds?, snapshot? }
+   Live: the board snapshot is built here from Supabase; the client only sends the ids visible under its
+   filters when scope is "focus". Simulation: the board exists only in the browser, so the client sends
+   its snapshot (lib/rosie.ts boardSnapshot). Response: streamed plain text. */
 import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { CONFIG } from "@/lib/config";
-import { loadJobs, loadProperties } from "@/lib/adapters";
+import { loadBoard } from "@/lib/adapters";
 import { boardSnapshot, chatSystem, insightSystem } from "@/lib/rosie";
 
 export const maxDuration = 60;
@@ -16,6 +17,7 @@ const Body = z.object({
   scope: z.enum(["focus", "global"]),
   lang: z.enum(["en", "es"]).default("en"),
   jobIds: z.array(z.string()).max(2000).optional(),
+  snapshot: z.string().max(60000).optional(),
   turns: z
     .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(4000) }))
     .max(8)
@@ -37,17 +39,22 @@ export async function POST(req: Request) {
     operator = data.user.email ?? operator;
   }
 
-  const [jobs, props] = await Promise.all([loadJobs(), loadProperties()]);
-  const ids = scope === "focus" && jobIds ? new Set(jobIds) : null;
-  const inScope = ids ? jobs.filter((j) => ids.has(j.id)) : jobs;
-  const snapshot = boardSnapshot({
-    jobs: inScope,
-    total: jobs.length,
-    props: new Map(props.map((p) => [p.id, p])),
-    operator,
-    scope,
-    tz: CONFIG.BUSINESS_TZ,
-  });
+  let snapshot: string;
+  const board = await loadBoard();
+  if (board) {
+    const props = new Map(board.world.props.map((p) => [p.id, p]));
+    const ids = scope === "focus" && jobIds ? new Set(jobIds) : null;
+    snapshot = boardSnapshot({
+      jobs: ids ? board.jobs.filter((j) => ids.has(j.id)) : board.jobs,
+      total: board.jobs.length,
+      prop: (id) => props.get(id),
+      teams: board.world.teams,
+      operator,
+      scope,
+      tz: CONFIG.BUSINESS_TZ,
+    });
+  } else if (parsed.data.snapshot) snapshot = parsed.data.snapshot;
+  else return Response.json({ error: "snapshot is required in simulation mode" }, { status: 400 });
 
   // Board data rides in the latest user turn so earlier turns stay stable.
   const messages: Anthropic.MessageParam[] =
