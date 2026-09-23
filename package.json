@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "import:data": "node --env-file-if-exists=.env.local --import tsx scripts/import-data.mts",
-    "geocode": "node --env-file-if-exists=.env.local --import tsx scripts/geocode-properties.mts"
+    "geocode": "node --env-file-if-exists=.env.local --import tsx scripts/geocode-properties.mts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.127.0",
@@ -30,7 +31,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.1"
   },
   "packageManager": "pnpm@12.3.4"
 }
