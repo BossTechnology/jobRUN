@@ -36,6 +36,30 @@ The import reads the PINCH CSV (`data/properties_list.csv`) as the source of tru
 
 Still needed from PINCH before going live: the cleaning-team (Pro) list for `cleaning_teams` and `properties.default_team_id`, and the operators list.
 
+## Live mode (real data)
+
+1. Supabase → Authentication → Users → **Add user** for each operator (email + password; there is no self sign-up).
+   Magic links also work once `https://<your-domain>/auth/callback` is in Authentication → URL Configuration → Redirect URLs.
+2. Insert each operator into `operators` (`name`, `email`, `active = true`). The first sign-in links the row to the Auth user.
+   Only active operators can read or write anything (RLS via `private.is_operator()`).
+3. Set `NEXT_PUBLIC_SIMULATE=false` (locally in `.env.local`, in Vercel for Production) and redeploy.
+
+In live mode the board loads from Supabase, follows Realtime changes, and every action is saved through
+`/api/board/sync` (jobs, messages, actions, add-ons, stage/assignment events, cancellations; Zendesk mirror when configured).
+
+## Integrations
+
+| Piece | Status |
+|---|---|
+| Map base, 3D buildings | MapLibre GL + OpenFreeMap tiles (free, no key) |
+| Traffic / weather | TomTom / OpenWeather via `/api/map/*` when keys are set; simulated otherwise |
+| Rosie | `/api/rosie`, needs `ANTHROPIC_API_KEY` |
+| Geocoding | US Census batch geocoder (`pnpm geocode`); Mapbox optional |
+| Cron texts (1-hour confirmation, check-in nudge) | Implemented; delivered via Twilio when `TWILIO_*` is set, logged either way |
+| Twilio inbound SMS | Implemented with signature check (`/api/in/twilio`) |
+| Zendesk mirror | Implemented (`ZENDESK_*`) |
+| Gmail, TrueDialog, TracWork, QuickBooks, Work App | Stubs (501) — need PINCH's accounts and API details (product doc §10) |
+
 ## Layout
 
 | Path | What |
@@ -61,7 +85,7 @@ Still needed from PINCH before going live: the cleaning-team (Pro) list for `cle
 - [x] `/api/rosie` server-side with the Anthropic key; webhook and cron routes scaffolded
 - [x] Header: timeframe with custom range, live ET clock, Alerts/Alarms/Anomalies/Actions intelligence, operator switcher, config sidebar (logo, language)
 - [x] Rail + filters: Observe (health, customers/properties/teams/operators/services/stages/keywords), Geo (city/ZIP/state, radius, property type), focus chip, Incidents and Activity feeds, job location map
-- [ ] Map mode (Mapbox) → Rosie UI
-- [ ] Mapbox GL base, 3D buildings, TomTom traffic, OpenWeather
-- [ ] Operator auth (Supabase Auth) and Realtime subscriptions
-- [ ] Each integration, flipping out of simulation as it lands
+- [x] Map mode (MapLibre): clusters, pins, list, incidents, tour, 3D buildings, traffic, weather, payout orb
+- [x] Rosie UI: modes, scope, insight card, chat, voice in/out
+- [x] Operator auth, operator-only RLS, Realtime, persisted actions, cron texts, Twilio inbound, Zendesk mirror
+- [ ] Gmail, TrueDialog, TracWork, QuickBooks, Work App — waiting on PINCH access
