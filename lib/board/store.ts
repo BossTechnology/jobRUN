@@ -1,13 +1,7 @@
 /* Client-side board state. Jobs are replaced (never mutated in place) so React re-renders only what changed;
    update() hands the caller a copy to edit, which keeps the prototype's mutation-style logic readable. */
 import type { Job } from "@/lib/domain/types";
-
-export interface BoardEvent {
-  key: string;
-  jobId: string;
-  stageI: number;
-  t: number;
-}
+import type { LiveEvent } from "./events";
 
 function cloneJob(j: Job): Job {
   return {
@@ -23,14 +17,19 @@ function cloneJob(j: Job): Job {
 export class BoardStore {
   private jobs: Job[] = [];
   private listeners = new Set<() => void>();
-  /** Actions feed for the header (Action Intelligence); rendered once the header is ported. */
-  events: BoardEvent[] = [];
+  private live: LiveEvent[] = [];
+  /** Builds the Action Intelligence event for log(); set by the app once the world is known. */
+  private logHook: ((key: string, j: Job, stageI?: number) => LiveEvent) | null = null;
+  setLogHook(fn: (key: string, j: Job, stageI?: number) => LiveEvent) {
+    this.logHook = fn;
+  }
 
   subscribe = (fn: () => void) => {
     this.listeners.add(fn);
     return () => this.listeners.delete(fn);
   };
   getSnapshot = () => this.jobs;
+  getEvents = () => this.live;
   private emit() {
     this.listeners.forEach((fn) => fn());
   }
@@ -61,8 +60,14 @@ export class BoardStore {
     this.jobs = this.jobs.filter((j) => j.id !== id);
     this.emit();
   }
+  setEvents(live: LiveEvent[]) {
+    this.live = live;
+    this.emit();
+  }
+  /** Records an automatic action (Zendesk update, Work App write, text sent…) in the actions feed. */
   log(key: string, j: Job, stageI?: number) {
-    this.events.push({ key, jobId: j.id, stageI: stageI ?? j.stage, t: Date.now() });
-    this.events = this.events.filter((e) => Date.now() - e.t < 6 * 3600000);
+    if (!this.logHook) return;
+    this.live = [...this.live, this.logHook(key, j, stageI)];
+    this.emit();
   }
 }

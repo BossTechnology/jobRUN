@@ -59,7 +59,9 @@ Still needed from PINCH before going live: the cleaning-team (Pro) list for `cle
 - [x] Board: five lanes, card states, clocks, paid row, simulation tick (payments, follow-ups, new requests, auto-confirm)
 - [x] Job modal: Pending (AI sender, AI/You fields, window, cleaner availability, gates), Scheduled edit, Stage tabs (details, Job Tracker with photos, billing/audit), Actions with reasons, add-ons, approve/reject, job report
 - [x] `/api/rosie` server-side with the Anthropic key; webhook and cron routes scaffolded
-- [ ] Header (timeframe, Alerts/Alarms/Anomalies/Actions, operator switcher) → filters/rail → map → Rosie UI
+- [x] Header: timeframe with custom range, live ET clock, Alerts/Alarms/Anomalies/Actions intelligence, operator switcher, config sidebar (logo, language)
+- [x] Rail + filters: Observe (health, customers/properties/teams/operators/services/stages/keywords), Geo (city/ZIP/state, radius, property type), focus chip, Incidents and Activity feeds, job location map
+- [ ] Map mode (Mapbox) → Rosie UI
 - [ ] Mapbox GL base, 3D buildings, TomTom traffic, OpenWeather
 - [ ] Operator auth (Supabase Auth) and Realtime subscriptions
 - [ ] Each integration, flipping out of simulation as it lands

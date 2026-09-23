@@ -34,7 +34,7 @@ export function PriceBadge({ j }: { j: Job }) {
   );
 }
 
-function CapMeter({ n }: { n: number }) {
+export function CapMeter({ n }: { n: number }) {
   const { l } = useBoard();
   const lv = capLevel(n);
   return (
@@ -86,19 +86,18 @@ export function SrcTag({ j, k }: { j: Job; k: FieldKey }) {
   return <span className={`jm-src ${s}`}>{s === "ai" ? l.tagAi : l.tagYou}</span>;
 }
 
-/** Address row. Opens Google Maps until the map modal is ported with MAP MODE. */
+/** Address row; opens the job's location map. */
 export function LocRow({ j }: { j: Job }) {
-  const { w, l } = useBoard();
+  const { w, l, openMap } = useBoard();
   const p = w.prop(j.prop);
-  const addr = `${p.street}, ${p.city}, ${p.st} ${p.zip}`;
   return (
     <div className="full">
       <label className="jm-lbl">{l.st2.location}</label>
       {j.propKnown ? (
-        <a className="jm-lc" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`} target="_blank" rel="noreferrer">
+        <button className="jm-lc" onClick={() => openMap(j.id)}>
           <Icon d={PIN_IC} sw={2} />
-          <span>{addr}</span>
-        </a>
+          <span>{p.street}, {p.city}, {p.st} {p.zip}</span>
+        </button>
       ) : (
         <div className="jm-ro jm-muted">{l.st2.pickPropLoc}</div>
       )}

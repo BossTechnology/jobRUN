@@ -3,8 +3,6 @@
   --font: var(--font-dm-sans), sans-serif;
 }
 
-/* Until the filter rail is ported, the board takes the full width. */
-.mm-shell.jr-norail { grid-template-columns: minmax(0, 1fr) !important; }
-
-.jr-sim { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px; background: var(--accent); margin-right: 10px; }
-.jr-lang { width: auto; margin-right: 14px; }
+/* Marks the deployed preview as simulated data. */
+.jr-sim { font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; background: var(--accent); color: var(--black); margin-right: 10px; white-space: nowrap; }
+@media (max-width: 767px) { .jr-sim { display: none; } }

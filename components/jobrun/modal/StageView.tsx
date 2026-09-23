@@ -79,7 +79,7 @@ function PhotoRow({ kind, n, onOpen }: { kind: "before" | "after"; n: number; on
 }
 
 function TrackerTab({ j, onPhoto }: { j: Job; onPhoto: (kind: "before" | "after", i: number) => void }) {
-  const { w, l, lang, now } = useBoard();
+  const { w, l, lang, now, openMap } = useBoard();
   const ctx = useActionCtx(j.id);
   const T2 = l.st2, p = w.prop(j.prop), exp = EXPECT[j.svc];
   const state: [string, string] = j.stage === 1 ? ["", T2.notStarted] : j.stage === 2 ? (j.delayed ? ["delay", T2.delayedLbl] : ["prog", T2.inProgress]) : ["done", T2.completed];
@@ -141,7 +141,10 @@ function TrackerTab({ j, onPhoto }: { j: Job; onPhoto: (kind: "before" | "after"
             {j.checkinOffset && (
               <div className="jm-banner warn">
                 <b>{T2.locTitle}</b>
-                <span>{l.checkinOff(miles(p, { lat: p.lat + j.checkinOffset[0], lng: p.lng + j.checkinOffset[1] }).toFixed(1))}</span>
+                <span>
+                  {l.checkinOff(miles(p, { lat: p.lat + j.checkinOffset[0], lng: p.lng + j.checkinOffset[1] }).toFixed(1))}{" "}
+                  <button className="jm-addr" onClick={() => openMap(j.id)}>{T2.viewMap}</button>
+                </span>
               </div>
             )}
           </Sec>

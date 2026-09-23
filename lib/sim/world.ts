@@ -46,14 +46,42 @@ export function buildSimWorld(): World {
   return { customers, teams, props };
 }
 
-/** Lookups over a World; cheap to rebuild when the world changes. */
+export interface City {
+  k: string;
+  ci: string;
+  st: string;
+  lat: number;
+  lng: number;
+  n: number;
+}
+
+/** Lookups over a World, plus the state and city lists the Geo filter uses (STATES_LIST / STATE_C / CITY_LIST). */
 export function indexWorld(w: World) {
   const props = new Map(w.props.map((p) => [p.id, p]));
   const custs = new Map(w.customers.map((c) => [c.id, c]));
+  const located = w.props.filter((p) => p.lat || p.lng);
+  const states = [...new Set(w.props.map((p) => p.st).filter(Boolean))].sort();
+  /** state → [lat, lng, property count] */
+  const stateC: Record<string, [number, number, number]> = {};
+  states.forEach((st) => {
+    const ps = located.filter((p) => p.st === st);
+    const n = w.props.filter((p) => p.st === st).length;
+    stateC[st] = ps.length ? [ps.reduce((a, p) => a + p.lat, 0) / ps.length, ps.reduce((a, p) => a + p.lng, 0) / ps.length, n] : [0, 0, n];
+  });
+  const m: Record<string, City> = {};
+  located.forEach((p) => {
+    const k = p.city + ", " + p.st;
+    const c = (m[k] ??= { k, ci: p.city, st: p.st, lat: 0, lng: 0, n: 0 });
+    c.lat += p.lat; c.lng += p.lng; c.n++;
+  });
+  const cities = Object.values(m).map((c) => ({ ...c, lat: c.lat / c.n, lng: c.lng / c.n })).sort((a, b) => b.n - a.n);
   return {
     ...w,
     prop: (id: string) => props.get(id)!,
     cust: (id: string) => custs.get(id) ?? w.customers[0],
+    states,
+    stateC,
+    cities,
   };
 }
 export type WorldIndex = ReturnType<typeof indexWorld>;

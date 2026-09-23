@@ -1,7 +1,8 @@
 "use client";
 /* BOARD — five lanes, cards, paid row. Ported from renderBoard() / cardHtml() / timerHtml(). */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useBoard, useJobs } from "@/lib/board/context";
+import { hasFilters } from "@/lib/board/filters";
 import { health, isBad, jobCls, sortLane } from "@/lib/domain/health";
 import { clockParts, jobNo, winTxt } from "@/lib/domain/time";
 import { SERVICES, type Job } from "@/lib/domain/types";
@@ -93,11 +94,10 @@ function Card({ j, flashing }: { j: Job; flashing: boolean }) {
 }
 
 export function Board({ flashId }: { flashId: string | null }) {
-  const { l, now } = useBoard();
-  const jobs = useJobs();
-  const [paidOpen, setPaidOpen] = useState(false);
-  // TODO(filters): apply matches(j) from the FILTERS section once the rail is ported.
-  const hasFilters = false;
+  const { l, now, filters, matches, paidOpen, setPaidOpen } = useBoard();
+  const all = useJobs();
+  const jobs = all.filter(matches);
+  const filtered = hasFilters(filters);
 
   return (
     <main className="jm-board" id="board" aria-label="Job board">
@@ -125,13 +125,13 @@ export function Board({ flashId }: { flashId: string | null }) {
               ))}
               {paid.length > 0 && (
                 <>
-                  <button className="jm-paidrow" onClick={() => setPaidOpen((o) => !o)}>
+                  <button className="jm-paidrow" onClick={() => setPaidOpen(!paidOpen)}>
                     {paidOpen ? l.hidePaid : l.paidRow(paid.length)}
                   </button>
                   {paidOpen && paid.map((j) => <Card key={j.id} j={j} flashing={flashId === j.id} />)}
                 </>
               )}
-              {!list.length && !paid.length && <div className="jm-col-empty">{hasFilters ? l.colEmptyF : l.colEmpty}</div>}
+              {!list.length && !paid.length && <div className="jm-col-empty">{filtered ? l.colEmptyF : l.colEmpty}</div>}
             </div>
           </section>
         );
