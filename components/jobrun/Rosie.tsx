@@ -35,20 +35,25 @@ async function callRosie(body: object, onText: (text: string) => void, signal?: 
   return text;
 }
 
+/** Rosie's replies: job numbers become links to the card; **bold** and "- " bullets render as formatting. */
 function Linkified({ text }: { text: string }) {
   const { jumpTo } = useBoard();
   const jobs = useJobs();
-  const parts = text.split(/(#\d{5})/g);
+  const links = (chunk: string, key: string) =>
+    chunk.split(/(#\d{5})/g).map((p, i) => {
+      const m = p.match(/^#(\d{5})$/);
+      return m && jobs.some((j) => j.id === "J" + m[1]) ? (
+        <a key={key + i} onClick={() => jumpTo("J" + m[1])} role="button" tabIndex={0}>{p}</a>
+      ) : (
+        <span key={key + i}>{p}</span>
+      );
+    });
+  const clean = text.replace(/^\s*[-*]\s+/gm, "• ").replace(/^#{1,6}\s+/gm, "");
   return (
     <>
-      {parts.map((p, i) => {
-        const m = p.match(/^#(\d{5})$/);
-        return m && jobs.some((j) => j.id === "J" + m[1]) ? (
-          <a key={i} onClick={() => jumpTo("J" + m[1])} role="button" tabIndex={0}>{p}</a>
-        ) : (
-          <span key={i}>{p}</span>
-        );
-      })}
+      {clean.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+        /^\*\*[^*]+\*\*$/.test(part) ? <b key={i}>{links(part.slice(2, -2), `b${i}-`)}</b> : <span key={i}>{links(part, `t${i}-`)}</span>,
+      )}
     </>
   );
 }
