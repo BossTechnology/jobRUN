@@ -1,0 +1,34 @@
+/* Ported from the prototype's .jm-board / .jm-col / .jm-card rules. */
+.header { height: 52px; display: flex; align-items: center; gap: 16px; padding: 0 22px; background: #fff; border-bottom: 1px solid var(--gray-border); }
+.logo { font-family: var(--font-cond); font-size: 22px; font-weight: 700; letter-spacing: .5px; }
+.mode { font-size: 12px; padding: 3px 8px; border-radius: 999px; background: var(--accent); }
+.spacer { flex: 1; }
+.link { font-size: 13px; color: var(--black); }
+
+.board { display: grid; grid-template-columns: repeat(5, minmax(210px, 1fr)); padding: 14px 0 0; overflow-x: auto; height: calc(100vh - 52px); }
+.col { display: flex; flex-direction: column; border-right: 1px solid var(--gray-border); min-height: 0; }
+.col:last-child { border-right: none; }
+.colHd { display: flex; align-items: center; gap: 9px; padding: 2px 22px 14px; max-width: 252px; width: 100%; margin: 0 auto; font-family: var(--font-cond); font-size: 18px; text-transform: uppercase; color: #3a3a3a; }
+.colHd .nm { flex: 1; font-weight: 600; letter-spacing: .3px; }
+.colHd .ct { font-weight: 700; font-variant-numeric: tabular-nums; }
+.colHd em { color: var(--red); font-style: normal; margin-left: 4px; }
+.colBody { flex: 1; overflow-y: auto; padding: 2px 18px 18px; display: flex; flex-direction: column; align-items: center; gap: 12px; min-height: 0; }
+
+.card { flex-shrink: 0; position: relative; width: 100%; max-width: 216px; background: #fff; border: 1px solid var(--gray-border); border-radius: 6px; padding: 9px 11px 9px 13px; font-size: 12px; overflow: hidden; }
+.card.bad::before, .card.crit::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--red); }
+.card.crit { background: #f0d4d4; border-color: #e39a9a; }
+.card.paid { background: #f3f9f0; border-color: #d6e8cc; }
+.card.low { background: #4b5260; border-color: #4b5260; color: #fff; border-style: dashed; }
+.top { display: flex; justify-content: space-between; gap: 8px; }
+.name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.num { color: var(--gray-light); font-variant-numeric: tabular-nums; }
+.row2 { display: flex; justify-content: space-between; margin-top: 3px; color: #5a616e; }
+.card.low .row2 { color: #c9ced8; }
+.clock.risk { color: #c77700; }
+.clock.bad { color: var(--red); font-weight: 600; }
+.msg { color: #1d8ae0; font-weight: 600; }
+
+@media (max-width: 767px) {
+  .board { grid-template-columns: repeat(5, 82vw); scroll-snap-type: x mandatory; }
+  .col { scroll-snap-align: start; }
+}

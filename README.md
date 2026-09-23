@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# jobRUN
 
-## Getting Started
+Job flow engine for PINCH — Next.js on Vercel · Supabase · Mapbox · Claude (Rosie).
+The full developer handoff is in [`docs/INTEGRATION.md`](docs/INTEGRATION.md); the product rules are in
+`docs/jobRUN_PINCH_Product_Document_Beta_0.1.docx`. The working prototype — the functional spec — is served at
+[`/prototype.html`](public/prototype.html) when the app runs.
 
-First, run the development server:
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp .env.example .env.local   # NEXT_PUBLIC_SIMULATE=true works with no other keys
+pnpm dev                     # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+With `NEXT_PUBLIC_SIMULATE=true` the board runs on simulated jobs over PINCH's real property list, like the prototype.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Database
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Create a Supabase project and run both files in `supabase/migrations/` in order
+   (SQL editor, or `supabase db push` after `supabase link`).
+   - `…000000_initial_schema.sql` is the handoff `schema.sql`, unchanged.
+   - `…000100_import_and_security.sql` adds import keys, supervisor fields, a lat/lng → `geom` trigger, and RLS on every table.
+2. Fill `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`.
+3. Import and geocode:
 
-## Learn More
+```bash
+pnpm import:data --dry-run   # report only
+pnpm import:data             # customers, properties, contacts (re-runnable)
+pnpm geocode --limit 20      # sample Mapbox geocoding first
+pnpm geocode                 # the rest
+```
 
-To learn more about Next.js, take a look at the following resources:
+The import reads the PINCH CSV (`data/properties_list.csv`) as the source of truth, drops the QA/test companies
+(`--include-test` keeps them), collapses duplicate rows, and takes ZIP-centroid coordinates from `data/properties.json`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Still needed from PINCH before going live: the cleaning-team (Pro) list for `cleaning_teams` and `properties.default_team_id`, and the operators list.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Layout
 
-## Deploy on Vercel
+| Path | What |
+|---|---|
+| `lib/config.ts` | `CONFIG` switches, same as the prototype |
+| `lib/domain/` | Job/property types and the ported pure functions (`health`, `thresholdFor`, `isBad`, `incKind`, sort orders, `isBizHours`) |
+| `lib/adapters/` | `loadProperties` / `loadJobs` with simulated and Supabase implementations |
+| `lib/supabase/` | browser, server (operator session) and admin (service role) clients |
+| `lib/rosie.ts`, `app/api/rosie` | Rosie prompts and board snapshot built server-side; streams plain text |
+| `app/api/in/*`, `app/api/out/*` | Integration routes — stubs returning 501 until each contract is confirmed |
+| `app/api/cron/automated-messages` | Minute cron for confirmation / check-in texts (`vercel.json`; needs Vercel Pro) |
+| `components/Board.tsx` | First cut of the five-lane board |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Porting status (INTEGRATION.md §11)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [x] Next.js app, env vars, schema, import + geocoding scripts
+- [x] Health/threshold logic ported; five lanes with prototype sort orders and card states
+- [x] `/api/rosie` server-side with the Anthropic key; webhook and cron routes scaffolded
+- [ ] Port the rest of the board (icons, live ticking, paid row), then modal → filters/rail → map → Rosie UI
+- [ ] Mapbox GL base, 3D buildings, TomTom traffic, OpenWeather
+- [ ] Operator auth (Supabase Auth) and Realtime subscriptions
+- [ ] Each integration, flipping out of simulation as it lands
