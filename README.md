@@ -11,6 +11,7 @@ The full developer handoff is in [`docs/INTEGRATION.md`](docs/INTEGRATION.md); t
 pnpm install
 cp .env.example .env.local   # NEXT_PUBLIC_SIMULATE=true works with no other keys
 pnpm dev                     # http://localhost:3000
+pnpm test                    # unit tests (Vitest); CI runs typecheck, lint, tests and build
 ```
 
 With `NEXT_PUBLIC_SIMULATE=true` the board runs on simulated jobs over PINCH's real property list, like the prototype.
@@ -58,6 +59,7 @@ In live mode the board loads from Supabase, follows Realtime changes, and every 
 | Cron texts (1-hour confirmation, check-in nudge) | Implemented; delivered via Twilio when `TWILIO_*` is set, logged either way |
 | Twilio inbound SMS | Implemented with signature check (`/api/in/twilio`) |
 | Zendesk mirror | Implemented (`ZENDESK_*`) |
+| Evidence PDF | Rendered server-side (headless Chromium) on validation, stored in the private `reports` bucket; emailed via Resend when `RESEND_API_KEY`/`REPORT_FROM` are set |
 | Gmail, TrueDialog, TracWork, QuickBooks, Work App | Stubs (501) — need PINCH's accounts and API details (product doc §10) |
 
 ## Layout

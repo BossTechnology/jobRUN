@@ -2,11 +2,13 @@
    recordAction, sendMessage storage, stage transitions). The client sends the job as it now stands plus what
    was appended since the last sync; RLS (private.is_operator()) scopes every write. Zendesk is mirrored when
    configured. Outbound delivery (Gmail / TrueDialog) is not wired yet: messages are stored and mirrored only. */
+import { after } from "next/server";
 import { z } from "zod";
 import { currentOperator, jobColumns } from "@/lib/adapters/supabase";
 import { SERVICE_KEYS, STAGES, type Job } from "@/lib/domain/types";
 import type { TablesInsert, TablesUpdate } from "@/lib/supabase/database.types";
 import { zendeskComment } from "@/lib/integrations/zendesk";
+import { deliverReport } from "@/lib/report/deliver";
 import { createClient } from "@/lib/supabase/server";
 
 const Msg = z.object({ dir: z.enum(["in", "out", "note"]), ch: z.enum(["email", "sms", "note"]), who: z.string().max(200), text: z.string().max(10000), t: z.number() });
@@ -73,6 +75,9 @@ export async function POST(req: Request) {
   ];
   if (lines.length && row.zendesk_ticket)
     await zendeskComment(row.zendesk_ticket, lines.join("\n"), [`jobrun_${STAGE[job.stage]}`, `svc_${SERVICE_KEYS[job.svc]}`]).catch((e) => console.error("zendesk mirror failed", e));
+
+  // Sealed in Validation → evidence PDF to Storage and, when email is configured, to the property manager.
+  if (prev.stage !== 4 && job.stage === 4) after(() => deliverReport(id).catch((e) => console.error("report delivery failed", e)));
 
   return Response.json({ ok: true });
 }
